@@ -4,4 +4,6 @@ import com.gromoks.jmsdocumentstore.entity.Document;
 
 public interface DocumentService {
     void add(Document document);
+
+    Document getById(String documentId);
 }

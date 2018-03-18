@@ -20,4 +20,9 @@ public class DocumentServiceImpl implements DocumentService {
     public void add(Document document) {
         documentDao.add(document);
     }
+
+    @Override
+    public Document getById(String documentId) {
+        return documentDao.getById(documentId);
+    }
 }

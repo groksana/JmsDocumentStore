@@ -30,4 +30,15 @@ public class DocumentDaoImpl implements DocumentDao {
 
         log.debug("Finish to add document to database");
     }
+
+    @Override
+    @Transactional
+    public Document getById(String documentId) {
+        log.debug("Start to get document by id = {}", documentId);
+
+        Document document = sessionFactory.getCurrentSession().get(Document.class, documentId);
+
+        log.debug("Finish to get document from database");
+        return document;
+    }
 }

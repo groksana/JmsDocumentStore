@@ -40,9 +40,28 @@ public class JmsMessageListener implements MessageListener {
     }
 
     @Override
-    @JmsListener(destination = "${document.queue}", selector = "add = 'anyDatabase'")
+    @JmsListener(destination = "${document.queue}", selector = "(operation in ('add.AnyDatabase','get.${database.name}'))")
     public void onMessage(Message message) {
         long startTime = System.currentTimeMillis();
+
+        String filter;
+        try {
+            filter = message.getStringProperty("operation");
+        } catch (JMSException e) {
+            log.error("Can't get JMS message with error: {}", e);
+            throw new RuntimeException(e);
+        }
+
+        if (filter.equals("add.AnyDatabase")) {
+            add(message);
+        } else if (filter.equals("get." + databaseName)) {
+            getById(message);
+        }
+
+        log.debug("Finish to process message. It took {} ms", System.currentTimeMillis() - startTime);
+    }
+
+    private void add(Message message) {
         Document loadedDocument = null;
 
         try {
@@ -69,13 +88,43 @@ public class JmsMessageListener implements MessageListener {
         jmsTemplate.send(responseQueue, new MessageCreator() {
             @Override
             public Message createMessage(Session session) throws JMSException {
-                Message message = session.createTextMessage(toJson(savedDocument));
+                Message message = session.createTextMessage(null);
                 message.setJMSCorrelationID(correlationId.get());
                 message.setStringProperty("database", databaseName);
                 message.setJMSReplyTo(responseQueue);
                 return message;
             }
         });
-        log.debug("Finish to process message. It took {} ms", System.currentTimeMillis() - startTime);
+    }
+
+    private void getById(Message message) {
+        String documentId = null;
+        try {
+            log.debug("Start to process message with id = {}", message.getJMSMessageID());
+
+            correlationId = new ThreadLocal<>();
+            correlationId.set(message.getJMSCorrelationID());
+
+            if (message instanceof TextMessage) {
+                TextMessage textMessage = (TextMessage) message;
+                documentId = textMessage.getText();
+            }
+        } catch (JMSException e) {
+            log.error("Can't get JMS message with error: {}", e);
+            throw new RuntimeException(e);
+        }
+
+        Document receivedDocument = documentService.getById(documentId);
+
+        Queue responseQueue = new ActiveMQQueue(responseQueueName);
+        jmsTemplate.send(responseQueue, new MessageCreator() {
+            @Override
+            public Message createMessage(Session session) throws JMSException {
+                Message message = session.createTextMessage(toJson(receivedDocument));
+                message.setJMSCorrelationID(correlationId.get());
+                message.setJMSReplyTo(responseQueue);
+                return message;
+            }
+        });
     }
 }
