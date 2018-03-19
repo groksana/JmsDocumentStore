@@ -39,6 +39,12 @@
         <property name="connectionFactory" ref="connectionFactory" />
     </bean>
 
+    <!-- JmsTopicTemplate Definition -->
+    <bean id="jmsTopicTemplate" class="org.springframework.jms.core.JmsTemplate">
+        <constructor-arg ref="connectionFactory" />
+        <property name="pubSubDomain" value="true"/>
+    </bean>
+
     <!-- =============================================== -->
     <!-- JMS receive, define JmsListenerContainerFactory -->
     <!-- =============================================== -->
@@ -46,6 +52,12 @@
           class="org.springframework.jms.config.DefaultJmsListenerContainerFactory">
         <property name="connectionFactory" ref="connectionFactory" />
         <property name="concurrency" value="3-10"/>
+    </bean>
+
+    <bean id="topicJmsListenerContainerFactory"
+          class="org.springframework.jms.config.DefaultJmsListenerContainerFactory">
+        <property name="connectionFactory" ref="connectionFactory"/>
+        <property name="pubSubDomain" value="true"/>
     </bean>
 
     <jdbc:embedded-database id="dataSource">

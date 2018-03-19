@@ -2,12 +2,15 @@ package com.gromoks.jmsdocumentstore.dao.impl;
 
 import com.gromoks.jmsdocumentstore.dao.DocumentDao;
 import com.gromoks.jmsdocumentstore.entity.Document;
+import org.hibernate.Query;
 import org.hibernate.SessionFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Repository
 public class DocumentDaoImpl implements DocumentDao {
@@ -40,5 +43,19 @@ public class DocumentDaoImpl implements DocumentDao {
 
         log.debug("Finish to get document from database");
         return document;
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    @Transactional
+    public List<Document> getByKeyWords(List<String> keyWordList) {
+        log.debug("Start to get documents by key words: {}", keyWordList);
+
+        List<Document> documentList = sessionFactory.getCurrentSession()
+                .createQuery(" from Document where context like :words")
+                .setParameter("words", keyWordList).list();
+
+        log.debug("Finish to get documents from database. Count = {}", documentList.size());
+        return documentList;
     }
 }

@@ -6,6 +6,8 @@ import com.gromoks.jmsdocumentstore.service.DocumentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class DocumentServiceImpl implements DocumentService {
 
@@ -24,5 +26,10 @@ public class DocumentServiceImpl implements DocumentService {
     @Override
     public Document getById(String documentId) {
         return documentDao.getById(documentId);
+    }
+
+    @Override
+    public List<Document> getByKeyWords(List<String> keyWordList) {
+        return documentDao.getByKeyWords(keyWordList);
     }
 }
