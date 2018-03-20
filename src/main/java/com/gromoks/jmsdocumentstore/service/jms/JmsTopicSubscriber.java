@@ -27,15 +27,18 @@ public class JmsTopicSubscriber implements MessageListener {
     @Value("${document.subscriber.queue}")
     private String subscriberQueueName;
 
-    @Autowired
-    @Qualifier("jmsTopicTemplate")
     private JmsTemplate jmsTopicTemplate;
 
-    @Autowired
     private DocumentService documentService;
 
-    @Autowired
     private JmsMessageService jmsMessageService;
+
+    @Autowired
+    public JmsTopicSubscriber(@Qualifier("jmsTopicTemplate") JmsTemplate jmsTopicTemplate, DocumentService documentService, JmsMessageService jmsMessageService) {
+        this.jmsTopicTemplate = jmsTopicTemplate;
+        this.documentService = documentService;
+        this.jmsMessageService = jmsMessageService;
+    }
 
     @Override
     @JmsListener(destination = "${document.topic}", containerFactory = "topicJmsListenerContainerFactory")

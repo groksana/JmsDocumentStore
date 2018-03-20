@@ -22,11 +22,8 @@ public class JmsMessageListener implements MessageListener {
 
     private final Logger log = LoggerFactory.getLogger(getClass());
 
-    @Autowired
-    @Qualifier("jmsTemplate")
     private JmsTemplate jmsTemplate;
 
-    @Autowired
     private DocumentService documentService;
 
     @Value("${database.name}")
@@ -36,6 +33,12 @@ public class JmsMessageListener implements MessageListener {
     private String responseQueueName;
 
     private ThreadLocal<String> correlationId;
+
+    @Autowired
+    public JmsMessageListener(@Qualifier("jmsTemplate") JmsTemplate jmsTemplate, DocumentService documentService) {
+        this.jmsTemplate = jmsTemplate;
+        this.documentService = documentService;
+    }
 
     @Override
     @JmsListener(destination = "${document.queue}", selector = "(operation in ('add.AnyDatabase','get.${database.name}'))")

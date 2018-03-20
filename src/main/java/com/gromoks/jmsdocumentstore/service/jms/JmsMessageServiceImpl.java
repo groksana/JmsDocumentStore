@@ -22,9 +22,12 @@ public class JmsMessageServiceImpl implements JmsMessageService {
 
     private final Logger log = LoggerFactory.getLogger(getClass());
 
-    @Autowired
-    @Qualifier("jmsTemplate")
     private JmsTemplate jmsTemplate;
+
+    @Autowired
+    public JmsMessageServiceImpl(@Qualifier("jmsTemplate") JmsTemplate jmsTemplate) {
+        this.jmsTemplate = jmsTemplate;
+    }
 
     @Override
     public void send(Destination destination, List<Document> documentList, String requestId) {
