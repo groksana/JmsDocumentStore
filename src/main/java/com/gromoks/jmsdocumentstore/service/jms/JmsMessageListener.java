@@ -85,7 +85,7 @@ public class JmsMessageListener implements MessageListener {
 
         Queue responseQueue = new ActiveMQQueue(responseQueueName);
         Document savedDocument = new Document();
-        savedDocument.setDocumentId(loadedDocument.getDocumentId());
+        savedDocument.setId(loadedDocument.getId());
         jmsTemplate.send(responseQueue, new MessageCreator() {
             @Override
             public Message createMessage(Session session) throws JMSException {

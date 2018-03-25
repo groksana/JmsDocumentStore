@@ -11,33 +11,33 @@ public class Document {
 
     @Id
     @Column(name = "ID")
-    private String documentId;
+    private String id;
 
-    @Column(name = "CONTEXT")
+    @Column(name = "CONTENT")
     @Convert(converter = StringListConverter.class)
-    private List<String> context;
+    private List<String> content;
 
-    public String getDocumentId() {
-        return documentId;
+    public String getId() {
+        return id;
     }
 
-    public void setDocumentId(String documentId) {
-        this.documentId = documentId;
+    public void setId(String id) {
+        this.id = id;
     }
 
-    public List<String> getContext() {
-        return context;
+    public List<String> getContent() {
+        return content;
     }
 
-    public void setContext(List<String> context) {
-        this.context = context;
+    public void setContent(List<String> content) {
+        this.content = content;
     }
 
     @Override
     public String toString() {
         return "Document{" +
-                "documentId=" + documentId +
-                ", context=" + context +
+                "id=" + id +
+                ", content=" + content +
                 '}';
     }
 }

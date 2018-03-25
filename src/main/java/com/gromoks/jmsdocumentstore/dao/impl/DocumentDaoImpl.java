@@ -29,7 +29,7 @@ public class DocumentDaoImpl implements DocumentDao {
     @Override
     @Transactional
     public void add(Document document) {
-        log.debug("Start to add document to database with id = {}", document.getDocumentId());
+        log.debug("Start to add document to database with id = {}", document.getId());
 
         sessionFactory.getCurrentSession().merge(document);
 
@@ -52,13 +52,13 @@ public class DocumentDaoImpl implements DocumentDao {
     public List<Document> getByKeyWords(List<String> keyWordList) {
         log.debug("Start to get documents by key words: {}", keyWordList);
 
-        StringBuilder queryText = new StringBuilder("select id, context from Document where ");
+        StringBuilder queryText = new StringBuilder("select id, content from Document where ");
 
         for (int i = 0; i < keyWordList.size(); i++) {
             if (i == 0) {
-                queryText.append("context like ? ");
+                queryText.append("content like ? ");
             } else {
-                queryText.append(" and context like ?");
+                queryText.append(" and content like ?");
             }
         }
 
@@ -74,8 +74,8 @@ public class DocumentDaoImpl implements DocumentDao {
         List<Document> documentList = new ArrayList<>();
         for (Object[] row : documentData) {
             Document document = new Document();
-            document.setDocumentId(row[0].toString());
-            document.setContext(new ArrayList<>(Arrays.asList(row[1].toString().split(","))));
+            document.setId(row[0].toString());
+            document.setContent(new ArrayList<>(Arrays.asList(row[1].toString().split(","))));
             documentList.add(document);
         }
 
