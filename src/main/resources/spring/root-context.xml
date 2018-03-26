@@ -39,12 +39,6 @@
         <property name="connectionFactory" ref="connectionFactory" />
     </bean>
 
-    <!-- JmsTopicTemplate Definition -->
-    <bean id="jmsTopicTemplate" class="org.springframework.jms.core.JmsTemplate">
-        <constructor-arg ref="connectionFactory" />
-        <property name="pubSubDomain" value="true"/>
-    </bean>
-
     <!-- =============================================== -->
     <!-- JMS receive, define JmsListenerContainerFactory -->
     <!-- =============================================== -->

@@ -5,6 +5,6 @@ import com.gromoks.jmsdocumentstore.entity.Document;
 import javax.jms.Destination;
 import java.util.List;
 
-public interface JmsMessageService {
+public interface MessageService {
     void send(Destination destination, List<Document> documentList, String requestId);
 }

@@ -6,11 +6,9 @@ import org.apache.activemq.command.ActiveMQQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jms.annotation.JmsListener;
 import org.springframework.jms.core.JmsTemplate;
-import org.springframework.jms.core.MessageCreator;
 import org.springframework.stereotype.Service;
 
 import javax.jms.*;
@@ -26,22 +24,26 @@ public class JmsMessageListener implements MessageListener {
 
     private DocumentService documentService;
 
-    @Value("${database.name}")
     private String databaseName;
 
-    @Value("${document.queue.response}")
-    private String responseQueueName;
+    private final Queue responseQueue;
 
     private ThreadLocal<String> correlationId;
 
     @Autowired
-    public JmsMessageListener(@Qualifier("jmsTemplate") JmsTemplate jmsTemplate, DocumentService documentService) {
+    public JmsMessageListener(JmsTemplate jmsTemplate,
+                              DocumentService documentService,
+                              @Value("${database.name}") String databaseName,
+                              @Value("${jms.document.response.queue}") String responseQueueName) {
         this.jmsTemplate = jmsTemplate;
         this.documentService = documentService;
+        this.databaseName = databaseName;
+
+        responseQueue = new ActiveMQQueue(responseQueueName);
     }
 
     @Override
-    @JmsListener(destination = "${document.queue}", selector = "(operation in ('add.AnyDatabase','get.${database.name}'))")
+    @JmsListener(destination = "${jms.document.request.queue}", selector = "(operation in ('add.AnyDatabase','get.${database.name}'))")
     public void onMessage(Message message) {
         long startTime = System.currentTimeMillis();
 
@@ -63,7 +65,7 @@ public class JmsMessageListener implements MessageListener {
     }
 
     private void add(Message message) {
-        Document loadedDocument = null;
+        Document loadedDocument;
 
         try {
             log.debug("Start to process message with id = {}", message.getJMSMessageID());
@@ -71,11 +73,9 @@ public class JmsMessageListener implements MessageListener {
             correlationId = new ThreadLocal<>();
             correlationId.set(message.getJMSCorrelationID());
 
-            if (message instanceof TextMessage) {
-                TextMessage textMessage = (TextMessage) message;
-                String document = textMessage.getText();
-                loadedDocument = parseValue(document, Document.class);
-            }
+            TextMessage textMessage = (TextMessage) message;
+            String document = textMessage.getText();
+            loadedDocument = parseValue(document, Document.class);
         } catch (JMSException e) {
             log.error("Can't get JMS message with error: {}", e);
             throw new RuntimeException(e);
@@ -83,33 +83,26 @@ public class JmsMessageListener implements MessageListener {
 
         documentService.add(loadedDocument);
 
-        Queue responseQueue = new ActiveMQQueue(responseQueueName);
         Document savedDocument = new Document();
         savedDocument.setId(loadedDocument.getId());
-        jmsTemplate.send(responseQueue, new MessageCreator() {
-            @Override
-            public Message createMessage(Session session) throws JMSException {
-                Message message = session.createTextMessage(null);
-                message.setJMSCorrelationID(correlationId.get());
-                message.setStringProperty("database", databaseName);
-                message.setJMSReplyTo(responseQueue);
-                return message;
-            }
+        jmsTemplate.send(responseQueue, session -> {
+            Message sendMessage = session.createTextMessage(null);
+            sendMessage.setJMSCorrelationID(correlationId.get());
+            sendMessage.setStringProperty("database", databaseName);
+            return sendMessage;
         });
     }
 
     private void getById(Message message) {
-        String documentId = null;
+        String documentId;
         try {
             log.debug("Start to process message with id = {}", message.getJMSMessageID());
 
             correlationId = new ThreadLocal<>();
             correlationId.set(message.getJMSCorrelationID());
 
-            if (message instanceof TextMessage) {
-                TextMessage textMessage = (TextMessage) message;
-                documentId = textMessage.getText();
-            }
+            TextMessage textMessage = (TextMessage) message;
+            documentId = textMessage.getText();
         } catch (JMSException e) {
             log.error("Can't get JMS message with error: {}", e);
             throw new RuntimeException(e);
@@ -117,15 +110,10 @@ public class JmsMessageListener implements MessageListener {
 
         Document receivedDocument = documentService.getById(documentId);
 
-        Queue responseQueue = new ActiveMQQueue(responseQueueName);
-        jmsTemplate.send(responseQueue, new MessageCreator() {
-            @Override
-            public Message createMessage(Session session) throws JMSException {
-                Message message = session.createTextMessage(toJson(receivedDocument));
-                message.setJMSCorrelationID(correlationId.get());
-                message.setJMSReplyTo(responseQueue);
-                return message;
-            }
+        jmsTemplate.send(responseQueue, session -> {
+            Message sendMessage = session.createTextMessage(toJson(receivedDocument));
+            sendMessage.setJMSCorrelationID(correlationId.get());
+            return sendMessage;
         });
     }
 }
