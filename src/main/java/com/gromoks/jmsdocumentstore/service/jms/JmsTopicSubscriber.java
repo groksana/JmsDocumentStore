@@ -53,7 +53,7 @@ public class JmsTopicSubscriber implements MessageListener {
             keyWordList = parseValue(list, List.class);
         } catch (JMSException e) {
             log.error("Can't get JMS message with error: {}", e);
-            throw new RuntimeException(e);
+            throw new RuntimeException("Can't get JMS message with error: ", e);
         }
 
         List<Document> documentList = documentService.getByKeyWords(keyWordList);

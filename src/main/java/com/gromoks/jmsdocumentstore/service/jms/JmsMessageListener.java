@@ -18,6 +18,8 @@ import static com.gromoks.jmsdocumentstore.util.JsonJacksonConverter.*;
 @Service
 public class JmsMessageListener implements MessageListener {
 
+    private static final String ADD_DOCUMENT_REQUEST = "add.AnyDatabase";
+
     private final Logger log = LoggerFactory.getLogger(getClass());
 
     private JmsTemplate jmsTemplate;
@@ -27,8 +29,6 @@ public class JmsMessageListener implements MessageListener {
     private String databaseName;
 
     private final Queue responseQueue;
-
-    private ThreadLocal<String> correlationId;
 
     @Autowired
     public JmsMessageListener(JmsTemplate jmsTemplate,
@@ -52,10 +52,10 @@ public class JmsMessageListener implements MessageListener {
             filter = message.getStringProperty("operation");
         } catch (JMSException e) {
             log.error("Can't get JMS message with error: {}", e);
-            throw new RuntimeException(e);
+            throw new RuntimeException("Can't get JMS message with error: ", e);
         }
 
-        if (filter.equals("add.AnyDatabase")) {
+        if (ADD_DOCUMENT_REQUEST.equals(filter)) {
             add(message);
         } else if (filter.equals("get." + databaseName)) {
             getById(message);
@@ -70,27 +70,24 @@ public class JmsMessageListener implements MessageListener {
         try {
             log.debug("Start to process message with id = {}", message.getJMSMessageID());
 
-            correlationId = new ThreadLocal<>();
-            correlationId.set(message.getJMSCorrelationID());
+            String correlationId = message.getJMSCorrelationID();
 
             TextMessage textMessage = (TextMessage) message;
             String document = textMessage.getText();
             loadedDocument = parseValue(document, Document.class);
+
+            documentService.add(loadedDocument);
+
+            jmsTemplate.send(responseQueue, session -> {
+                Message sendMessage = session.createMessage();
+                sendMessage.setJMSCorrelationID(correlationId);
+                sendMessage.setStringProperty("database", databaseName);
+                return sendMessage;
+            });
         } catch (JMSException e) {
             log.error("Can't get JMS message with error: {}", e);
-            throw new RuntimeException(e);
+            throw new RuntimeException("Can't get JMS message with error: ", e);
         }
-
-        documentService.add(loadedDocument);
-
-        Document savedDocument = new Document();
-        savedDocument.setId(loadedDocument.getId());
-        jmsTemplate.send(responseQueue, session -> {
-            Message sendMessage = session.createTextMessage(null);
-            sendMessage.setJMSCorrelationID(correlationId.get());
-            sendMessage.setStringProperty("database", databaseName);
-            return sendMessage;
-        });
     }
 
     private void getById(Message message) {
@@ -98,22 +95,21 @@ public class JmsMessageListener implements MessageListener {
         try {
             log.debug("Start to process message with id = {}", message.getJMSMessageID());
 
-            correlationId = new ThreadLocal<>();
-            correlationId.set(message.getJMSCorrelationID());
+            String correlationId = message.getJMSCorrelationID();
 
             TextMessage textMessage = (TextMessage) message;
             documentId = textMessage.getText();
+
+            Document receivedDocument = documentService.getById(documentId);
+
+            jmsTemplate.send(responseQueue, session -> {
+                Message sendMessage = session.createTextMessage(toJson(receivedDocument));
+                sendMessage.setJMSCorrelationID(correlationId);
+                return sendMessage;
+            });
         } catch (JMSException e) {
             log.error("Can't get JMS message with error: {}", e);
-            throw new RuntimeException(e);
+            throw new RuntimeException("Can't get JMS message with error: ", e);
         }
-
-        Document receivedDocument = documentService.getById(documentId);
-
-        jmsTemplate.send(responseQueue, session -> {
-            Message sendMessage = session.createTextMessage(toJson(receivedDocument));
-            sendMessage.setJMSCorrelationID(correlationId.get());
-            return sendMessage;
-        });
     }
 }
