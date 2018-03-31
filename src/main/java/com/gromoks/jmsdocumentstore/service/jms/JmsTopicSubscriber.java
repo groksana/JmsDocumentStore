@@ -56,6 +56,8 @@ public class JmsTopicSubscriber implements MessageListener {
             throw new RuntimeException("Can't get JMS message with error: ", e);
         }
 
+        messageService.sendAcknowledgment(requestSearchQueue, requestId);
+
         List<Document> documentList = documentService.getByKeyWords(keyWordList);
 
         messageService.send(requestSearchQueue, documentList, requestId);

@@ -33,9 +33,26 @@ public class JmsMessageService implements MessageService {
         jmsTemplate.send(destination, session -> {
             Message message = session.createTextMessage(toJson(documentList));
             message.setStringProperty("requestId", requestId);
+            message.setBooleanProperty("acknowledgment", false);
             return message;
         });
 
         log.debug("Finish to send list of documents. It took {} ms", System.currentTimeMillis() - startTime);
+    }
+
+    @Override
+    public void sendAcknowledgment(Destination destination, String requestId) {
+        log.debug("Start to process acknowledgment for requestId = {}", requestId);
+        long startTime = System.currentTimeMillis();
+
+        jmsTemplate.send(destination, session -> {
+            Message message = session.createMessage();
+            message.setStringProperty("requestId", requestId);
+            message.setBooleanProperty("acknowledgment", true);
+            return message;
+        });
+
+        log.debug("Finish to process acknowledgment. It took {} ms", System.currentTimeMillis() - startTime);
+
     }
 }
